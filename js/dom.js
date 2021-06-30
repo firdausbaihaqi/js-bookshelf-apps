@@ -1,4 +1,31 @@
-function addBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete) {
+const INCOMPLETE_BOOK = "incompleteBookshelfList";
+const COMPLETE_BOOK = "completeBookshelfList";
+
+function addBook() {
+    const idBook = +new Date();
+    const inputBookTitle = document.getElementById("inputBookTitle").value;
+    const inputBookAuthor = document.getElementById("inputBookAuthor").value;
+    const inputBookYear = document.getElementById("inputBookYear").value;
+    const inputBookIsComplete = document.getElementById("inputBookIsComplete").checked;
+
+    const book = createBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete);
+    const bookObject = composeBookObject(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete);
+
+    books.push(bookObject);
+
+    if (inputBookIsComplete) {
+        document.getElementById(COMPLETE_BOOK).append(book);
+    } else {
+        document.getElementById(INCOMPLETE_BOOK).append(book);
+    }
+
+    updateJson();
+}
+
+function createBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete) {
+    const book = document.createElement("article");
+    book.setAttribute("id", idBook)
+    book.classList.add("card", "my-3");
 
     const bookTitle = document.createElement("h5");
     bookTitle.classList.add("text-truncate");
@@ -15,12 +42,8 @@ function addBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBo
 
     const br = document.createElement("br");
 
-    const card = document.createElement("article");
-    card.setAttribute("id", idBook)
-    card.classList.add("card", "my-3");
-
-    const cardBody = document.createElement("div");
-    cardBody.classList.add("card-body", "border-start", "border-4", "border-info", "d-flex", "justify-content-between");
+    const cardContainer = document.createElement("div");
+    cardContainer.classList.add("card-body", "border-start", "border-4", "border-info", "d-flex", "justify-content-between");
 
     const cardContent = document.createElement("div");
     cardContent.classList.add("card-content");
@@ -28,48 +51,55 @@ function addBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBo
     const cardAction = addAction(inputBookIsComplete, idBook);
 
     cardContent.append(bookTitle, bookAuthor, br, bookYear);
-    cardBody.append(cardContent);
-    cardBody.append(cardAction);
-    card.append(cardBody);
+    cardContainer.append(cardContent);
+    cardContainer.append(cardAction);
+    book.append(cardContainer);
 
-    if (inputBookIsComplete) {
-        document.getElementById(COMPLETE_BOOK).append(card);
-    } else {
-        document.getElementById(INCOMPLETE_BOOK).append(card);
-    }
-
-    const bookObject = composeBookObject(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete);
-    books.push(bookObject);
-    updateJson();
+    return book;
 }
 
 function addAction(inputBookIsComplete, idBook) {
     const cardActions = document.createElement("div");
 
-    const actionDelete = document.createElement("button");
-    actionDelete.classList.add("btn", "btn-sm", "btn-outline-danger", "mx-1");
-    actionDelete.innerHTML = '<i class="bi bi-x"></i>';
-
-    actionDelete.addEventListener("click", function () {
-        const cardParent = document.getElementById(idBook);
-        cardParent.addEventListener("eventDelete", function (event) {
-            event.target.remove();
-        });
-        cardParent.dispatchEvent(eventDelete);
-    });
+    const actionDelete = createActionDelete(idBook);
+    const actionRead = createActionRead(idBook);
+    const actionUndo = createActionUndo(idBook);
 
     cardActions.append(actionDelete);
 
     if (inputBookIsComplete) {
-        cardActions.append(actionUndo(idBook));
+        cardActions.append(actionUndo);
     } else {
-        cardActions.append(actionRead(idBook));
+        cardActions.append(actionRead);
     }
 
     return cardActions;
 }
 
-function actionRead(idBook) {
+function createActionDelete(idBook) {
+    const actionDelete = document.createElement("button");
+    actionDelete.classList.add("btn", "btn-sm", "btn-outline-danger", "mx-1");
+    actionDelete.innerHTML = '<i class="bi bi-x"></i>';
+
+    actionDelete.addEventListener("click", function () {
+        let confirmation = confirm("apakah anda yakin ingin menghapus buku?");
+
+        if (confirmation) {
+            const cardParent = document.getElementById(idBook);
+            cardParent.addEventListener("eventDelete", function (event) {
+                event.target.remove();
+            });
+            cardParent.dispatchEvent(new Event("eventDelete"));
+
+            deleteBookFromJson(idBook);
+            updateJson();
+        }
+    });
+
+    return actionDelete;
+}
+
+function createActionRead(idBook) {
     const action = document.createElement("button");
     action.classList.add("btn", "btn-sm", "btn-outline-primary");
     action.innerHTML = '<i class="bi bi-check"></i>';
@@ -82,13 +112,21 @@ function actionRead(idBook) {
         const bookYear = cardParent.querySelectorAll(".card-content > span")[1].innerText;
 
         cardParent.remove();
-        addBook(idBook, bookTitle, bookAuthor, bookYear, true);
+
+        const book = createBook(idBook, bookTitle, bookAuthor, bookYear, true);
+        document.getElementById(COMPLETE_BOOK).append(book);
+
+        deleteBookFromJson(idBook);
+        const bookObject = composeBookObject(idBook, bookTitle, bookAuthor, bookYear, true);
+
+        books.push(bookObject);
+        updateJson();
     })
 
     return action;
 }
 
-function actionUndo(idBook) {
+function createActionUndo(idBook) {
     const action = document.createElement("button");
     action.classList.add("btn", "btn-sm", "btn-outline-secondary");
     action.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i>';
@@ -101,8 +139,31 @@ function actionUndo(idBook) {
         const bookYear = cardParent.querySelectorAll(".card-content > span")[1].innerText;
 
         cardParent.remove();
-        addBook(idBook, bookTitle, bookAuthor, bookYear, false);
+
+        const book = createBook(idBook, bookTitle, bookAuthor, bookYear, false);
+        document.getElementById(INCOMPLETE_BOOK).append(book);
+
+        deleteBookFromJson(idBook);
+        const bookObject = composeBookObject(idBook, bookTitle, bookAuthor, bookYear, false);
+
+        books.push(bookObject);
+        updateJson();
     })
 
     return action;
+}
+
+function bookSearch(keyword) {
+    const filter = keyword.toUpperCase();
+    const titles = document.getElementsByTagName("h5");
+
+    for (let i = 0; i < titles.length; i++) {
+        const titlesText = titles[i].textContent || titles[i].innerText;
+
+        if (titlesText.toUpperCase().indexOf(filter) > -1) {
+            titles[i].closest(".card").style.display = "";
+        } else {
+            titles[i].closest(".card").style.display = "none";
+        }
+    }
 }

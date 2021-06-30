@@ -24,7 +24,7 @@ function fetchJson() {
         books = data;
     }
 
-    renderFromBooks();
+    document.dispatchEvent(new Event("onjsonfetched"));
 }
 
 function composeBookObject(id, title, author, year, isComplete) {
@@ -34,8 +34,22 @@ function composeBookObject(id, title, author, year, isComplete) {
 }
 
 function renderFromBooks() {
-    // for (book of books) {
-    const book = books[0];
-    addBook(book.id, book.title, book.author, book.year, book.isComplete);
-    // }
+    for (book of books) {
+        const newBook = createBook(book.id, book.title, book.author, book.year, book.isComplete);
+
+        if (book.isComplete) {
+            document.getElementById(COMPLETE_BOOK).append(newBook);
+        } else {
+            document.getElementById(INCOMPLETE_BOOK).append(newBook);
+        }
+    }
+}
+
+function deleteBookFromJson(idBook) {
+    for (let arrayPosition = 0; arrayPosition < books.length; arrayPosition++) {
+        if (books[arrayPosition].id == idBook) {
+            books.splice(arrayPosition, 1);
+            break;
+        }
+    }
 }

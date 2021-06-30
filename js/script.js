@@ -1,25 +1,30 @@
-const formInput = document.getElementById("inputBook");
-const eventDelete = new Event("eventDelete");
-
-const INCOMPLETE_BOOK = "incompleteBookshelfList";
-const COMPLETE_BOOK = "completeBookshelfList";
-
 document.addEventListener("DOMContentLoaded", function () {
+
+    const formInput = document.getElementById("inputBook");
+    const formSearch = document.getElementById("searchBook");
+
+    formInput.addEventListener("submit", function (event) {
+        event.preventDefault();
+        addBook();
+
+        document.getElementById("inputBookTitle").value = "";
+        document.getElementById("inputBookAuthor").value = "";
+        document.getElementById("inputBookYear").value = "";
+        document.getElementById("inputBookIsComplete").checked = false;
+    });
+
+    formSearch.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        const inputSearch = document.getElementById("searchBookTitle").value;
+        bookSearch(inputSearch);
+    })
+
     if (isStorageSupported()) {
         fetchJson();
     }
 });
 
-formInput.addEventListener("submit", function (event) {
-    event.preventDefault();
-    const idBook = +new Date();
-    const inputBookTitle = document.getElementById("inputBookTitle").value;
-    const inputBookAuthor = document.getElementById("inputBookAuthor").value;
-    const inputBookYear = document.getElementById("inputBookYear").value;
-    const inputBookIsComplete = document.getElementById("inputBookIsComplete").checked;
-
-    // console.log(inputBookTitle + inputBookAuthor + inputBookYear + inputBookIsComplete + idBook)
-    console.log(books)
-    
-    addBook(idBook, inputBookTitle, inputBookAuthor, inputBookYear, inputBookIsComplete);
+document.addEventListener("onjsonfetched", function () {
+    renderFromBooks();
 });
